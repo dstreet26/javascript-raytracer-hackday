@@ -42,11 +42,6 @@ Will output a ppm file that can be viewed in an image viewer or converted with i
 magick convert finishbook.ppm finishbook.png
 ```
 
-# Bugs
-
-There is currently a bug with the multiprocessing script, it does not output the final few images.
-
-
 #### Reference Material:
 https://raytracing.github.io/books/RayTracingTheNextWeek.html
 https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-ray-tracing/ray-tracing-practical-example.html

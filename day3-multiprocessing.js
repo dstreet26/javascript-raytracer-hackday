@@ -1,10 +1,15 @@
-// node day3-animations.js
+// node day3-multiprocessing.js
 // ffmpeg  -i "animations/anim%d.png" -c:v libx264 -pix_fmt yuv420p out.mp4
 // ffplay out.mp4
 
 const Jimp = require("jimp");
+const cluster = require("cluster");
+const numCPUs = require("os").availableParallelism();
+const fs = require("fs");
+const path = require("path");
+const directory = "animations";
 const imageWidth = 100;
-const animationFrames = 100;
+const animationFrames = 50;
 const aspectRatio = 16 / 9;
 const imageHeight = Math.floor(imageWidth / aspectRatio);
 const fov = 50;
@@ -36,15 +41,46 @@ const pixel00Location = addVectors(
 );
 const maxVal = 255;
 
-//range foreach because we need to await on each image creation
 (async () => {
-  const range = (start, stop, step) =>
-    Array.from(
-      { length: (stop - start) / step + 1 },
-      (_, i) => start + i * step
-    );
-  for (const t of range(0, animationFrames, 1)) {
-    await createImage(t);
+  if (cluster.isPrimary) {
+    if (!fs.existsSync(directory)) {
+      fs.mkdirSync(directory);
+    }
+
+    fs.readdir(directory, (err, files) => {
+      if (err) throw err;
+      for (const file of files) {
+        if (path.extname(file) === ".png") {
+          fs.unlink(path.join(directory, file), (err) => {
+            if (err) throw err;
+          });
+        }
+      }
+    });
+    for (let i = 0; i < numCPUs; i++) {
+      cluster.fork();
+    }
+  } else {
+    const processIndex = cluster.worker.id - 1;
+    const processCount = numCPUs;
+    const framesPerProcess = Math.floor(animationFrames / processCount);
+    const minFrame = framesPerProcess * processIndex;
+    const maxFrame =
+      processIndex === processCount - 1
+        ? animationFrames - 1
+        : framesPerProcess * (processIndex + 1) - 1;
+
+    const range = (start, stop, step) =>
+      Array.from(
+        { length: (stop - start) / step + 1 },
+        (_, i) => start + i * step
+      );
+
+    for (const t of range(minFrame, maxFrame, 1)) {
+      await createImage(t);
+    }
+
+    process.exit(0);
   }
 })();
 
@@ -80,8 +116,7 @@ function createWorld(t) {
   };
   const sphere1 = {
     type: "sphere",
-    // center: [6, 0, (-t*0.2)+7],
-    center: [4, 0, (t * -0.2) + 10],
+    center: [4, 0, t * -0.2 + 10],
     radius: 2,
     material: {
       type: "glass",
@@ -103,18 +138,11 @@ function createWorld(t) {
 }
 
 async function createImage(t, callback) {
-  // console.log("createImage", t);
+  console.log("createImage", t);
   var world = createWorld(t);
-  // console.log("world", world[0].center);
-  // var s = fs.createWriteStream("image15.ppm");
-  // s.write(`P3\n${imageWidth} ${imageHeight}\n${maxVal}\n`);
 
   var colors = [];
   for (let j = 0; j < imageHeight; j++) {
-    // console.log(`${t}/${j}/${imageHeight}`)
-    // process.stdout.clearLine(0);
-    process.stdout.cursorTo(0);
-    process.stdout.write(`${j}/${imageHeight} - ${t}/${animationFrames}`);
     for (let i = 0; i < imageWidth; i++) {
       let color = [0, 0, 0];
       const r = getRay(i, j);
@@ -135,15 +163,13 @@ async function createImage(t, callback) {
         data[i * 4 + 3] = maxVal;
       }
       this.bitmap.data = data;
-      // console.log("animations/anim_0" + t + ".png");
-      // await this.writeAsync("animations/anim_0" + t + ".png");
+
       await this.writeAsync("animations/anim" + t + ".png");
       resolve();
     });
   });
 }
 
-// s.end();
 function getRay(i, j) {
   const pixelCenter = addVectors(
     pixel00Location,
@@ -235,7 +261,6 @@ function scatter(ray, rec) {
   return null;
 }
 function hitSphere(center, radius, ray, min, max) {
-  //todo: benchmark difference between dot and length_squared
   const oc = subtractVectors(ray[0], center);
   const a = lengthSquared(ray[1]);
   const halfB = dotVectors(oc, ray[1]);
@@ -285,7 +310,6 @@ function unitVector(vector) {
   return multiplyVector(vector, 1 / vectorLength(vector));
 }
 function vectorLength(vector) {
-  //todo: benchmark difference between hypot and manual
   return Math.hypot(vector[0], vector[1], vector[2]);
 }
 function dotVectors(a, b) {
@@ -343,12 +367,11 @@ function reflectance(cosine, ref_idx) {
 }
 function writeColor(color, samples_per_pixel) {
   const scale = 1.0 / samples_per_pixel;
-  // const scaledColor = multiplyVector(color, scale);
+
   const scaledColor = multiplyVector(color, scale).map((x) => Math.sqrt(x));
-  // const scaledColor2 = multiplyVector(scaledColor, 1);
+
   const colorScaled = multiplyVector(scaledColor, maxVal).map((x) =>
     Math.round(x).toFixed(0)
   );
   return colorScaled;
-  //   s.write(`${colorScaled.join(" ")}\n`);
 }
