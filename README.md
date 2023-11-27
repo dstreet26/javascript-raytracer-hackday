@@ -42,12 +42,17 @@ Will output a ppm file that can be viewed in an image viewer or converted with i
 magick convert finishbook.ppm finishbook.png
 ```
 
-#### Reference Material:
+#### Reference Material to keep looking into...:
 https://raytracing.github.io/books/RayTracingTheNextWeek.html
+
 https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-ray-tracing/ray-tracing-practical-example.html
+
 https://gabrielgambetta.com/computer-graphics-from-scratch/04-shadows-and-reflections.html
+
 https://www.jakobmaier.at/posts/raytracing/
+
 https://www.kevinbeason.com/smallpt/
+
 https://github.com/noteed/smallpt-hs
 
 <!-- #### vector libs (not used):
