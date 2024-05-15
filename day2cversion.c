@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#define _USE_MATH_DEFINES
 #include <math.h>
 
 enum MaterialType
@@ -466,13 +467,15 @@ int main()
         },
     };
 
-    int minA = -11;
-    int maxA = 11;
-    int minB = -11;
-    int maxB = 11;
-    int count = (maxA - minA) * (maxB - minB);
-    int countfromreferencespheres = 4;
-    struct Sphere world[count + countfromreferencespheres];
+    const int minA = -11;
+    const int maxA = 11;
+    const int minB = -11;
+    const int maxB = 11;
+    const int count = (maxA - minA) * (maxB - minB);
+    const int countfromreferencespheres = 4;
+    const int total = count + countfromreferencespheres;
+    struct Sphere *world = malloc(total * sizeof(struct Sphere));
+
     world[0] = groundSphere;
     world[1] = referenceSphere1;
     world[2] = referenceSphere2;
@@ -537,7 +540,6 @@ int main()
         }
     }
 
-    int length = sizeof(world) / sizeof(world[0]);
     FILE *f = fopen("test.ppm", "w");
     fprintf(f, "P3\n%i %i\n%i\n", imageWidth, imageHeight, maxVal);
     for (int j = 0; j < imageHeight; j++)
@@ -550,7 +552,7 @@ int main()
             float raycolor[3];
             for (int k = 0; k < samplesPerPixel; k++)
             {
-                rayColor(r, maxDepth, raycolor, world, length);
+                rayColor(r, maxDepth, raycolor, world, total);
                 addVectors(color, raycolor, color);
             }
             writeColor(f, color, samplesPerPixel);
